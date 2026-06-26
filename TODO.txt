@@ -1,0 +1,5 @@
+- RemoteEvent "PadVisualEvent"
+- RemoteFunction "GetPadInitialTextFunction"
+- Script "SpinCoin"
+- ModuleScript "Leaderboard"
+- ModuleScript "PlayerData"
