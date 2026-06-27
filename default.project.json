@@ -15,13 +15,7 @@
     },
     "ReplicatedStorage": {
       "$className": "ReplicatedStorage",
-      "$path": "src/shared",
-      "GetPadInitialTextFunction": {
-        "$className": "RemoteFunction"
-      },
-      "PadVisualEvent": {
-        "$className": "RemoteEvent"
-      }
+      "$path": "src/shared"
     }
   }
 }
