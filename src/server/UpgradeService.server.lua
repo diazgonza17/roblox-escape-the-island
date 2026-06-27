@@ -1,13 +1,13 @@
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
-local ServerStorage = game:GetService("ServerStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local padVisualEvent = ReplicatedStorage:WaitForChild("PadVisualEvent")
 local getPadInitialText = ReplicatedStorage:WaitForChild("GetPadInitialTextFunction")
 
-local Leaderboard = require(ServerStorage.Leaderboard)
-local PlayerData = require(ServerStorage.PlayerData)
+local Leaderboard = require(ServerScriptService.modules.Leaderboard)
+local PlayerData = require(ServerScriptService.modules.PlayerData)
 
 local JUMP_KEY_NAME = PlayerData.JUMP_KEY_NAME
 local SPEED_KEY_NAME = PlayerData.SPEED_KEY_NAME

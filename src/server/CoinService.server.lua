@@ -1,10 +1,10 @@
 
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
-local ServerStorage = game:GetService("ServerStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 
-local Leaderboard = require(ServerStorage.Leaderboard)
-local PlayerData = require(ServerStorage.PlayerData)
+local Leaderboard = require(ServerScriptService.modules.Leaderboard)
+local PlayerData = require(ServerScriptService.modules.PlayerData)
 
 local coins = Workspace.World.Coins:GetChildren()
 
