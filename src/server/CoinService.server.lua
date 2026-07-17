@@ -10,7 +10,7 @@ local PlayerData = require(ServerScriptService.modules.PlayerData)
 
 local COIN_KEY_NAME = PlayerData.COIN_KEY_NAME
 local COIN_COOLDOWN = 10
-local COIN_INCREMENT = 100
+local COIN_INCREMENT = 1
 local COIN_SPIN_SPEED = 120
 local COIN_TAG_NAME = "Coin"
 
