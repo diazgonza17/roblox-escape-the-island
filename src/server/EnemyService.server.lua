@@ -26,7 +26,11 @@ local PLACEHOLDER_ENEMY_NAME_PREFIX = "Enemy"
 local PLACEHOLDER_ENEMY_SIZE = Vector3.new(3, 3, 3)
 local PLACEHOLDER_ENEMY_COLOR = Color3.fromRGB(170, 50, 255)
 
-local TARGET_UPDATE_INTERVAL = 0.5
+local ENEMY_UPDATE_INTERVAL = 0.01
+local ENEMY_MOVEMENT_SPEED = 10
+local ENEMY_RETURN_STOP_DISTANCE = 1
+local ENEMY_TARGET_STOP_DISTANCE = 4
+local ENEMY_TARGET_HEIGHT_OFFSET = 2
 local TARGETED_ENEMY_COLOR = Color3.fromRGB(255, 50, 100)
 
 -- ==========================================
@@ -129,7 +133,9 @@ local function createPlaceholderEnemy(zone, enermyNumber, parent)
 
 	enemy.Color = PLACEHOLDER_ENEMY_COLOR
 	enemy.Material = Enum.Material.Neon
-	enemy.Position = getRandomPointInZone(zone)
+
+	local spawnPosition = getRandomPointInZone(zone)
+	enemy.Position = spawnPosition
 
 	enemy:SetAttribute("SpawnZoneId", zone.id)
 	enemy.Parent = parent
@@ -137,6 +143,7 @@ local function createPlaceholderEnemy(zone, enermyNumber, parent)
 	enemyStates[enemy] = {
 		zone = zone,
 		target = nil,
+		returnPosition = spawnPosition
 	}
 
 	enemy.Destroying:Connect(function()
@@ -147,18 +154,58 @@ local function createPlaceholderEnemy(zone, enermyNumber, parent)
 end
 
 -- ==========================================
+-- MOVEMENT
+-- ==========================================
+
+local function moveEnemyTowardPosition(enemy, destination, stopDistance, deltaTime)
+	local offsetToDestination = destination - enemy.Position
+	local distanceToDestination = offsetToDestination.Magnitude
+	if distanceToDestination <= stopDistance then return end
+
+	local maximumMovement = ENEMY_MOVEMENT_SPEED * deltaTime
+	local remainingDistance = distanceToDestination - stopDistance
+	local movementDistance = math.min(maximumMovement, remainingDistance)
+
+	local movementDirection = offsetToDestination.Unit
+	enemy.Position += movementDirection * movementDistance
+end
+
+local function updateEnemyMovement(enemy, state, deltaTime)
+	local target = state.target
+
+	if target then
+		local targetRootPart = getLivingPlayerRootPart(target)
+
+		if targetRootPart then
+			local targetPosition = targetRootPart.Position + Vector3.new(0, ENEMY_TARGET_HEIGHT_OFFSET, 0)
+			moveEnemyTowardPosition(enemy, targetPosition, ENEMY_TARGET_STOP_DISTANCE, deltaTime)
+
+			return
+		end
+	end
+
+	moveEnemyTowardPosition(enemy, state.returnPosition, ENEMY_RETURN_STOP_DISTANCE, deltaTime)
+end
+
+-- ==========================================
 -- TARGETING
 -- ==========================================
 
-local function findNearestTargetForZone(zone)
+local function findNearestTargetForEnemy(enemy, zone)
 	local nearestPlayer = nil
-	local nearestDistance = math.huge
+	local nearestDistanceFromEnemy = math.huge
 
 	for _, player in Players:GetPlayers() do
-		local distanceFromZone = getPlayerDistanceFromZone(player, zone)
-		if distanceFromZone and distanceFromZone <= zone.leashRange and distanceFromZone < nearestDistance then
+		local rootPart = getLivingPlayerRootPart(player)
+		if not rootPart then continue end
+
+		local distanceFromZone = (rootPart.Position - zone.cframe.Position).Magnitude
+		if distanceFromZone > zone.leashRange then continue end
+
+		local distanceFromEnemy = (rootPart.Position - enemy.Position).Magnitude
+		if distanceFromEnemy < nearestDistanceFromEnemy then
 			nearestPlayer = player
-			nearestDistance = distanceFromZone
+			nearestDistanceFromEnemy = distanceFromEnemy
 		end
 	end
 
@@ -166,7 +213,12 @@ local function findNearestTargetForZone(zone)
 end
 
 local function setEnemyTarget(enemy, state, target)
+	local previousTarget = state.target
 	state.target = target
+
+	if previousTarget and not target then 
+		state.returnPosition = getRandomPointInZone(state.zone)
+	end
 
 	if target then
 		enemy:SetAttribute("TargetUserId", target.UserId)
@@ -181,18 +233,28 @@ local function updateEnemyTarget(enemy, state)
 	local currentTarget = state.target
 	if currentTarget and isLivingPlayerWithinRange(currentTarget, state.zone, state.zone.leashRange) then return end
 
-	local newTarget = findNearestTargetForZone(state.zone)
+	local newTarget = findNearestTargetForEnemy(enemy, state.zone)
 	setEnemyTarget(enemy, state, newTarget)
 end
 
-local function runEnemyTargeting(enemiesFolder)
+local function runEnemySimulation(enemiesFolder)
+	local previousUpdateTime = time()
+
 	while enemiesFolder.Parent do
+		local currentTime = time()
+		local deltaTime = currentTime - previousUpdateTime
+		previousUpdateTime = currentTime
+
 		for enemy, state in enemyStates do
-			if enemy:IsDescendantOf(enemiesFolder) then updateEnemyTarget(enemy, state)
-			else enemyStates[enemy] = nil end
+			if enemy:IsDescendantOf(enemiesFolder) then 
+				updateEnemyTarget(enemy, state)
+				updateEnemyMovement(enemy, state, deltaTime)
+			else 
+				enemyStates[enemy] = nil 
+			end
 		end
 
-		task.wait(TARGET_UPDATE_INTERVAL)
+		task.wait(ENEMY_UPDATE_INTERVAL)
 	end
 end
 
@@ -299,7 +361,7 @@ local function initializeEnemyZones()
 	end
 
 	task.spawn(function ()
-		runEnemyTargeting(enemiesFolder)
+		runEnemySimulation(enemiesFolder)
 	end)
 end
 
